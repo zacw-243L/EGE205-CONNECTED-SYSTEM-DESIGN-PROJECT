@@ -1,0 +1,78 @@
+<html>
+   <head>
+      <!Provide path to link to styling file, image files and 3rd party javascript library––>
+      <link rel='stylesheet' href="{{ url_for('static', filename='css/style.css') }}">
+      <img id="lightbulb" src="{{url_for('static', filename='images/LightBulb.png')}}" style="display: none;">
+
+      <!Use of Javascript library socket.io.js to connect to the python web server––>
+      <script src='https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js'></script>
+      <script src='https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.2/socket.io.js'></script>
+      <script type='text/javascript'>
+         $(document).ready(function(){
+	    var socket = io.connect('http://192.168.0.233:5000');
+
+	    var lightCanvas = document.getElementById("centerCanvas");
+	    var lightContext = lightCanvas.getContext("2d");
+	    var lightBulbImage = document.getElementById("lightbulb");
+
+	    $('OnButton').click(function(){
+	       socket.emit('ControlUSR0Led','on');
+	    });
+
+	    $('OffButton').click(function(){
+	       socket.emit('ControlUSR0Led','off');
+	    });
+
+             //Image Printing
+	    lightContext.drawImage(lightBulbImage, 175, 110);
+
+	    //Event triggered when python web server received data from BBBW1
+	    socket.on('Web_BBBWEvent', function(RxData) {
+	       LightingControl_AdjustBrightness(RxData.data);
+		   console.log(RxData.data);
+	    });
+
+	    //LightingControl_AdjustBrightness Function
+	    //Adjust the transparency level of the yellow circle based on the value received from the Pot Click
+	    function LightingControl_AdjustBrightness(BrightnessLevel)
+	    {
+	       lightContext.globalAlpha = 1.0;
+	       lightContext.clearRect(0, 0, 400, 300);
+	       lightContext.drawImage(lightBulbImage, 175, 110);
+	       lightContext.globalAlpha = BrightnessLevel;
+	       lightContext.arc(200, 150, 80, 0, 2 * Math.PI);
+	       lightContext.fillStyle = 'yellow';
+	       lightContext.fill();
+	       lightContext.globalAlpha = 1.0;
+	       lightContext.font = "15px Arial";
+	       lightContext.fillStyle = 'Black';
+	       lightContext.fillText("Estimated Lux Value:", 100, 260);
+	       lightContext.fillText(Math.floor(Math.abs(BrightnessLevel*400)), 260, 260);
+	    }
+         });
+      </script>
+   </head>
+
+   <body>
+      <center>
+         <h1>Light Brightness Control System</h1>
+         <table>
+         <tr>
+            <td>
+	      <h5>Controlling the BBBW Board</h5>
+	      <OnButton><button>ON</button></OnButton>
+	      <OffButton><button>OFF</button></OffButton>
+	   </td>
+         </tr>
+         <tr>
+	   <td>
+	      <canvas id="centerCanvas" width="400" height="300" style="border:1px solid #d3d3d3;" >
+	         Your browser does not support the HTML5 canvas tag.
+	      </canvas>
+	   </td>
+         </tr>
+         </table>
+         <h5>Copyright @ EGE205 Connected System Project Design</h5>
+      <center>
+   </body>
+</html>

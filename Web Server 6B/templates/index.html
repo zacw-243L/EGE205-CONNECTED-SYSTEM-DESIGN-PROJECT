@@ -1,0 +1,279 @@
+<html>
+   <head>
+      <!Provide path to link to styling file, image files and 3rd party javascript library––>
+      <link rel='stylesheet' href="{{ url_for('static', filename='css/style.css') }}">
+      <img id="floorplan" src="{{url_for('static', filename='images/Floorplan.png')}}" style="display: none;">
+      <img id="motionsensoriconblue" src="{{url_for('static', filename='images/MotionSensorIconBlue.png')}}" style="display: none;">
+      <img id="motionsensoriconred" src="{{url_for('static', filename='images/MotionSensorIconRed.png')}}" style="display: none;">
+      <img id="lightbulb" src="{{url_for('static', filename='images/LightBulb.png')}}" style="display: none;">
+      <img id="keypad" src="{{url_for('static', filename='images/Keypad.png')}}" style="display: none;">
+      <img id="dooropen" src="{{url_for('static', filename='images/DoorOpen.png')}}" style="display: none;">
+      <img id="doorclose" src="{{url_for('static', filename='images/DoorClose.png')}}" style="display: none;">
+
+      <!Use of Javascript library socket.io.js to connect to the python web server––>
+      <script src='https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js'></script>
+      <script src='https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.2/socket.io.js'></script>
+      <script type='text/javascript'>
+      $(document).ready(function()
+      {
+         //Initialization and declaration of global variable
+         var socket = io.connect('http://192.168.X.X:5000');
+         var floorPlanCanvas = document.getElementById("centerCanvas");
+         var floorPlanContext = floorPlanCanvas.getContext("2d");
+         var floorPlanImage = document.getElementById("floorplan");
+
+         var motionCanvas = document.getElementById("topLeftCanvas");
+         var motionContext = motionCanvas.getContext("2d");
+         var motionSensorIconBlueImage = document.getElementById("motionsensoriconblue");
+         var motionSensorIconRedImage = document.getElementById("motionsensoriconred");
+
+         var lightCanvas = document.getElementById("bottomLeftCanvas");
+         var lightContext = lightCanvas.getContext("2d");
+         var lightBulbImage = document.getElementById("lightbulb");
+
+         var doorAccessCanvas = document.getElementById("topRightCanvas");
+         var doorAccessContext = doorAccessCanvas.getContext("2d");
+         var keyPadImage = document.getElementById("keypad");
+
+         var doorDetectCanvas = document.getElementById("bottomRightCanvas");
+         var doorDetectContext = doorDetectCanvas.getContext("2d");
+         var doorOpenImage = document.getElementById("dooropen");
+         var doorCloseImage = document.getElementById("doorclose");
+
+         var BlinkingFlagStatus = 0;
+         var DoorOpenTurning;
+         var DoorRotateCount = 0;
+         var DoorOpenCloseStatus = 0;
+
+         //Image Printing
+         floorPlanContext.drawImage(floorPlanImage, 0, 0);
+         motionContext.drawImage(motionSensorIconBlueImage, 70, 37);
+         lightContext.drawImage(lightBulbImage, 75, 50);
+         doorAccessContext.drawImage(keyPadImage, 50, 0);
+         doorDetectContext.drawImage(doorCloseImage, 50, 33);
+
+         //Door Panel Printing
+         floorPlanContext.beginPath();
+         floorPlanContext.lineWidth = 5;
+         floorPlanContext.lineCap = "round";
+         floorPlanContext.moveTo(550,420);
+         floorPlanContext.lineTo(550,375);
+         floorPlanContext.stroke();
+
+         //Event triggered when python web server received data from BBBW1
+         socket.on('Web_BBBW1Event', function(RxData) {
+            $('bbbw1').text(RxData.data);
+	 MotionDetection_BlinkImage();
+         });
+
+         //Event triggered when python web server received data from BBBW2
+         socket.on('Web_BBBW2Event', function(RxData) {
+            $('bbbw2').text(RxData.data);
+	 LightingControl_AdjustBrightness(RxData.data);
+         });
+
+
+
+         //Event triggered when python web server received data from BBBW3
+         socket.on('Web_BBBW3Event', function(RxData) {
+            $('bbbw3').text(RxData.data);
+	 DoorAccess_KeyCheck(RxData.data);
+         });
+
+         //Event triggered when python web server received data from BBBW4
+         socket.on('Web_BBBW4Event', function(RxData) {
+            $('bbbw4').text(RxData.data);
+            if(DoorOpenCloseStatus == 1)
+	 {
+	    DoorDetection_OpenCloseCheck(RxData.data);
+	 }
+         });
+
+         //MotionDetection_BlinkImage Function
+         //Toggle between motionSensorIconBlueImage & motionSensorIconRedImage when motion is detected
+         function MotionDetection_BlinkImage()
+         {
+            //Clear the existing image
+	 motionContext.globalAlpha = 1.0;
+	 motionContext.clearRect(0, 0, 200, 155);
+
+	 if (BlinkingFlagStatus == 0)
+	 {
+	    BlinkingFlagStatus = 1;
+	    motionContext.drawImage(motionSensorIconRedImage, 70, 37);
+	 }
+	 else
+	 {
+	    BlinkingFlagStatus = 0;
+	    motionContext.drawImage(motionSensorIconBlueImage, 70, 37);
+	 }
+         }
+
+         //LightingControl_AdjustBrightness Function
+         //Adjust the transparency level of the yellow circle based on the value received from the Pot Click
+         function LightingControl_AdjustBrightness(BrightnessLevel)
+         {
+            lightContext.globalAlpha = 1.0;
+	 lightContext.clearRect(0, 0, 200, 155);
+	 lightContext.drawImage(lightBulbImage, 75, 50);
+	 lightContext.globalAlpha = BrightnessLevel;
+	 lightContext.arc(100, 70, 40, 0, 2 * Math.PI);
+	 lightContext.fillStyle = 'yellow';
+	 lightContext.fill();
+         }
+
+         //DoorAccess_KeyCheck Function
+         //Highlight the individual number key based on the value received from the Analog Key Click
+         function DoorAccess_KeyCheck(KeyPressed)
+         {
+            doorAccessContext.globalAlpha = 1.0;
+	 doorAccessContext.clearRect(0, 0, 200, 155);
+	 doorAccessContext.drawImage(keyPadImage, 50, 0);
+	 if(KeyPressed == 1)
+	 {
+	    doorAccessContext.beginPath();
+	    doorAccessContext.globalAlpha = 0.5;
+	    doorAccessContext.arc(72, 20, 24, 0, 2 * Math.PI);
+	    doorAccessContext.fillStyle = 'white';
+	    doorAccessContext.fill();
+	 }
+	 if(KeyPressed == 2)
+	 {
+	    doorAccessContext.beginPath();
+	    doorAccessContext.globalAlpha = 0.5;
+	    doorAccessContext.arc(127, 20, 24, 0, 2 * Math.PI);
+	    doorAccessContext.fillStyle = 'white';
+	    doorAccessContext.fill();
+	 }
+	 if(KeyPressed == 3)
+	 {
+	    doorAccessContext.beginPath();
+	    doorAccessContext.globalAlpha = 0.5;
+	    doorAccessContext.arc(72, 75, 24, 0, 2 * Math.PI);
+	    doorAccessContext.fillStyle = 'white';
+	    doorAccessContext.fill();
+	 }
+	 if(KeyPressed == 4)
+	 {
+	    doorAccessContext.beginPath();
+	    doorAccessContext.globalAlpha = 0.5;
+	    doorAccessContext.arc(127, 75, 24, 0, 2 * Math.PI);
+	    doorAccessContext.fillStyle = 'white';
+	    doorAccessContext.fill();
+	 }
+
+
+
+
+
+	 if(KeyPressed == 5)
+	 {
+	    doorAccessContext.beginPath();
+	    doorAccessContext.globalAlpha = 0.5;
+	    doorAccessContext.arc(72, 130, 24, 0, 2 * Math.PI);
+	    doorAccessContext.fillStyle = 'white';
+	    doorAccessContext.fill();
+	 }
+	 if(KeyPressed == 6)
+	 {
+	    doorAccessContext.beginPath();
+	    doorAccessContext.globalAlpha = 0.5;
+	    doorAccessContext.arc(127, 130, 24, 0, 2 * Math.PI);
+	    doorAccessContext.fillStyle = 'white';
+	    doorAccessContext.fill();
+
+               floorPlanContext.translate(550, 420);
+	    DoorOpenTurning = setInterval(DoorOpenTurningAnimation, 50);
+	 }
+         }
+
+         //DoorOpenTurningAnimation Function
+         function DoorOpenTurningAnimation()
+         {
+            floorPlanContext.globalAlpha = 1.0;
+	 floorPlanContext.clearRect(-10, 0, 60, -53);
+
+	 floorPlanContext.beginPath();
+	 floorPlanContext.lineWidth = 5;
+	 floorPlanContext.lineCap = "round";
+	 floorPlanContext.moveTo(0,0);
+	 floorPlanContext.lineTo(0,-45);
+	 floorPlanContext.stroke();
+	 floorPlanContext.rotate(0.1);
+	 DoorRotateCount++;
+	 if (DoorRotateCount == 17)
+	 {
+	    DoorRotateCount = 0;
+	    floorPlanContext.rotate(-1.7);
+	    floorPlanContext.translate(-550, -420);
+	    floorPlanContext.globalAlpha = 1.0;
+	    doorDetectContext.clearRect(0, 0, 200, 155);
+	    doorDetectContext.drawImage(doorOpenImage, 50, 28);
+	    DoorOpenCloseStatus = 1;
+	    clearInterval(DoorOpenTurning);
+	 }
+         }
+
+         //DoorDetection_OpenCloseCheck Function
+         function DoorDetection_OpenCloseCheck(DoorDetectionStatus)
+         {
+            if (DoorDetectionStatus == 1)
+	 {
+	    doorDetectContext.globalAlpha = 1.0;
+	    doorDetectContext.clearRect(0, 0, 200, 155);
+	    doorDetectContext.drawImage(doorCloseImage, 50, 33);
+	 }
+	 else
+	 {
+	    doorDetectContext.globalAlpha = 1.0;
+	    doorDetectContext.clearRect(0, 0, 200, 155);
+	    doorDetectContext.drawImage(doorOpenImage, 50, 28);
+	 }
+         }
+      });
+      </script>
+   </head>
+
+   <body>
+      <center>
+         <h1>Connected System Classroom</h1>
+            <table>
+	 <tr>
+	    <td>
+	       <h3>Motion Detection</h3>
+	       <canvas id="topLeftCanvas" width="200" height="155">
+                     Your browser does not support the HTML5 canvas tag.
+	       </canvas>
+	    </td>
+	    <td rowspan = "2">
+	       <canvas id="centerCanvas" width="620" height="440" style="border:1px solid #d3d3d3;" >
+                     Your browser does not support the HTML5 canvas tag.
+	       </canvas>
+	    </td>
+	    <td>
+	       <h3>Door Access</h3>
+	       <canvas id="topRightCanvas" width="200" height="155">
+	          Your browser does not support the HTML5 canvas tag.
+	       </canvas>
+	    </td>
+            </tr>
+
+            <tr>
+               <td>
+	       <h3>Lighting Control</h3>
+                  <canvas id="bottomLeftCanvas" width="200" height="155">
+	          Your browser does not support the HTML5 canvas tag.
+	       </canvas>
+	    </td>
+	    <td>
+	       <h3>Door Detection</h3>
+	       <canvas id="bottomRightCanvas" width="200" height="155" >
+	          Your browser does not support the HTML5 canvas tag.
+	       </canvas>
+	    </td>
+	 </tr>
+         </table>
+         <h5>Copyright @ EGE205 Connected System Project Design</h5>
+      <center>
+   </body>
+</html>

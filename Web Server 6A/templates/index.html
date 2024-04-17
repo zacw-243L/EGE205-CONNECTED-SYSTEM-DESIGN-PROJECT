@@ -1,0 +1,75 @@
+<html>
+   <head>
+      <link rel='stylesheet' href="{{ url_for('static', filename='css/style.css') }}">
+      <script src='https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js'></script>
+      <script src='https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.2/socket.io.js'></script>
+      <script type='text/javascript'>
+         $(document).ready(function(){
+	    var socket = io.connect('http://192.168.0.113:8080');
+
+	    $('OnButton').click(function(){
+	       socket.emit('ControlUSR0Led','on');
+	    });
+
+	    $('OffButton').click(function(){
+	       socket.emit('ControlUSR0Led','off');
+	    });
+
+            socket.on('BBBW1Event', function(RxData) {
+	       $('bbbw1').text(RxData.data);
+	    });
+
+            socket.on('Web_BBBW2Event', function(RxData) {
+	       $('bbbw2').text(RxData.data);
+	    });
+
+            socket.on('Web_BBBW3Event', function(RxData) {
+	       $('bbbw3').text(RxData.data);
+	    });
+
+            socket.on('Web_BBBW4Event', function(RxData) {
+	       $('bbbw4').text(RxData.data);
+	    });
+         });
+      </script>
+   </head>
+
+   <body>
+      <center>
+         <h1>My First Connected System!</h1>
+	 <table style='width:100%'>
+	    <tr>
+	       <td colspan="2">
+	          <h3>Controlling all the BBBW Boards</h3>
+	          <OnButton><button>ON</button></OnButton>
+	          <OffButton><button>OFF</button></OffButton>
+	       </td>
+	    </tr>
+            <tr>
+	       <td style='width:50%'>
+	          <h3>BBBW 1</h3>
+		  <h4>I am a Random Number Generator!</h4>
+		  <p>Your Lucky Number is <bbbw1>???</bbbw1></p>
+	       </td>
+	       <td style='width:50%'>
+	          <h3>BBBW 2</h3>
+		  <h4>I am a Clock!</h4>
+		  <p>The Local Time Now is <bbbw2>???</bbbw2></p>
+	       </td>
+	    </tr>
+	    <tr>
+	       <td style='width:50%'>
+	          <h3>BBBW 3</h3>
+		  <h4>I am a Mathematician!</h4>
+		  <p><bbbw3>1 + 1 = 2</bbbw3></p>
+	       </td>
+	       <td style='width:50%'>
+	          <h3>BBBW 4</h3>
+		  <h4>I am a Weather Station!</h4>
+		  <p>The Current Temperature in Singapore is <bbbw4>???</bbbw4> C</p>
+	       </td>
+	    </tr>
+         </table>
+      <center>
+   </body>
+</html>
